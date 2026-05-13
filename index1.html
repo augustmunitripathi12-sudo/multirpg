@@ -13,8 +13,8 @@
 }
 
 body{
-  background:#111;
   overflow:hidden;
+  background:#111;
   font-family:Arial,sans-serif;
   display:flex;
   justify-content:center;
@@ -25,7 +25,6 @@ body{
 canvas{
   background:#1a1a1a;
   image-rendering:pixelated;
-  box-shadow:0 0 30px rgba(0,0,0,0.8);
 }
 
 #start-screen{
@@ -39,54 +38,50 @@ canvas{
   color:white;
   text-align:center;
   z-index:100;
-  box-shadow:0 0 40px rgba(0,0,0,0.9);
 }
 
 .char-option{
   display:inline-block;
   margin:10px;
-  padding:10px;
   border:3px solid transparent;
   border-radius:10px;
+  padding:8px;
   cursor:pointer;
 }
 
-.char-option:hover,
 .selected{
   border-color:#4ade80;
 }
 
 input{
-  padding:12px;
-  width:240px;
+  padding:10px;
+  width:220px;
   margin-top:10px;
   border:none;
   border-radius:6px;
   background:#333;
   color:white;
-  font-size:18px;
+  font-size:16px;
 }
 
 button{
-  margin-top:15px;
-  padding:12px 28px;
+  margin-top:10px;
+  padding:10px 20px;
+  background:#4ade80;
   border:none;
   border-radius:6px;
-  background:#4ade80;
-  color:black;
-  font-size:18px;
   cursor:pointer;
-  font-weight:bold;
+  font-size:16px;
 }
 
 #chat{
   position:absolute;
   left:10px;
   bottom:10px;
-  width:320px;
+  width:300px;
   background:rgba(0,0,0,0.85);
-  border-radius:10px;
   padding:10px;
+  border-radius:10px;
   display:none;
 }
 
@@ -94,12 +89,47 @@ button{
   height:180px;
   overflow-y:auto;
   color:white;
-  margin-bottom:10px;
+  margin-bottom:8px;
   font-size:14px;
 }
 
 #chatInput{
   width:100%;
+}
+
+#mobile-controls{
+  position:absolute;
+  bottom:20px;
+  right:20px;
+  display:none;
+  z-index:999;
+}
+
+.control-row{
+  display:flex;
+  justify-content:center;
+}
+
+.ctrl{
+  width:70px;
+  height:70px;
+  margin:5px;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.2);
+  color:white;
+  font-size:28px;
+  backdrop-filter:blur(4px);
+}
+
+.ctrl:active{
+  background:#4ade80;
+}
+
+@media (max-width: 900px){
+  #mobile-controls{
+    display:block;
+  }
 }
 </style>
 </head>
@@ -109,6 +139,7 @@ button{
 <canvas id="game" width="800" height="600"></canvas>
 
 <div id="start-screen">
+
   <h2>Choose Character</h2>
 
   <div class="char-option selected" data-char="original">
@@ -123,61 +154,86 @@ button{
 
   <br>
 
-  <input type="text" id="nameInput" maxlength="15" value="Player">
+  <input id="nameInput" maxlength="15" value="Player">
 
   <br>
 
   <button onclick="startGame()">Start Game</button>
+
 </div>
 
 <div id="chat">
   <div id="messages"></div>
-  <input type="text" id="chatInput" placeholder="Type message...">
+  <input id="chatInput" placeholder="Type message...">
+</div>
+
+<!-- MOBILE CONTROLS -->
+
+<div id="mobile-controls">
+
+  <div class="control-row">
+    <button class="ctrl" id="up">⬆</button>
+  </div>
+
+  <div class="control-row">
+    <button class="ctrl" id="left">⬅</button>
+    <button class="ctrl" id="down">⬇</button>
+    <button class="ctrl" id="right">➡</button>
+  </div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 ctx.imageSmoothingEnabled = false;
 
-// IMPORTANT FIX
 const socket = io();
 
 const keys = {};
 
 const SPRITE_WIDTH = 64;
 const SPRITE_HEIGHT = 160;
-const MOVE_SPEED = 2;
+const MOVE_SPEED = 2.4;
 const FRAME_DELAY = 10;
 const GROUND_OFFSET = 64;
 
 let animationTimer = 0;
 
-function loadSprites(prefix, underscore = true){
-  return Array.from({length:4}, (_,i)=>{
+function loadSprites(prefix, underscore=true){
+
+  return Array.from({length:4},(_,i)=>{
+
     const img = new Image();
+
     img.src = underscore
       ? `${prefix}_${i+1}.png`
       : `${prefix}${i+1}.png`;
+
     return img;
+
   });
+
 }
 
 const characters = {
+
   original:{
-    front:loadSprites("frontwalk", true),
-    back:loadSprites("backwalk", true),
-    side:loadSprites("rightwalk", true)
+    front:loadSprites("frontwalk",true),
+    back:loadSprites("backwalk",true),
+    side:loadSprites("rightwalk",true)
   },
 
   blue:{
-    front:loadSprites("bluefront", false),
-    back:loadSprites("blueback", false),
-    side:loadSprites("blueright", false)
+    front:loadSprites("bluefront",false),
+    back:loadSprites("blueback",false),
+    side:loadSprites("blueright",false)
   }
+
 };
 
 const processedImages = new Map();
@@ -189,6 +245,7 @@ function makeBlackTransparent(img){
   }
 
   const off = document.createElement("canvas");
+
   off.width = img.width || SPRITE_WIDTH;
   off.height = img.height || SPRITE_HEIGHT;
 
@@ -209,6 +266,7 @@ function makeBlackTransparent(img){
     ){
       data[i+3] = 0;
     }
+
   }
 
   offCtx.putImageData(imageData,0,0);
@@ -219,6 +277,7 @@ function makeBlackTransparent(img){
 }
 
 let myPlayer = {
+
   x:350,
   y:250,
   frame:0,
@@ -226,24 +285,20 @@ let myPlayer = {
   currentDir:"front",
   name:"Player",
   character:"original"
+
 };
 
 const otherPlayers = {};
 
 function startGame(){
 
-  const name =
+  myPlayer.name =
     document.getElementById("nameInput")
-    .value
-    .trim();
-
-  myPlayer.name = name || "Player";
-
-  const selected =
-    document.querySelector(".char-option.selected");
+    .value.trim() || "Player";
 
   myPlayer.character =
-    selected.dataset.char;
+    document.querySelector(".selected")
+    .dataset.char;
 
   document.getElementById("start-screen")
     .style.display = "none";
@@ -255,6 +310,7 @@ function startGame(){
     name:myPlayer.name,
     character:myPlayer.character
   });
+
 }
 
 document.querySelectorAll(".char-option")
@@ -266,6 +322,7 @@ document.querySelectorAll(".char-option")
     .forEach(e=>e.classList.remove("selected"));
 
     el.classList.add("selected");
+
   });
 
 });
@@ -274,8 +331,11 @@ socket.on("currentPlayers",(players)=>{
 
   Object.keys(players).forEach(id=>{
 
+    // FIXED CLONE BUG
     if(id !== socket.id){
+
       otherPlayers[id] = players[id];
+
     }
 
   });
@@ -283,27 +343,52 @@ socket.on("currentPlayers",(players)=>{
 });
 
 socket.on("playerJoined",(player)=>{
-  otherPlayers[player.id] = player;
+
+  // FIXED CLONE BUG
+  if(player.id !== socket.id){
+
+    otherPlayers[player.id] = player;
+
+  }
+
 });
 
 socket.on("playerMoved",(player)=>{
-  otherPlayers[player.id] = player;
+
+  if(player.id !== socket.id){
+
+    otherPlayers[player.id] = player;
+
+  }
+
 });
 
 socket.on("playerUpdated",(player)=>{
-  otherPlayers[player.id] = player;
+
+  if(player.id !== socket.id){
+
+    otherPlayers[player.id] = player;
+
+  }
+
 });
 
 socket.on("playerDisconnected",(id)=>{
+
   delete otherPlayers[id];
+
 });
 
 socket.on("chatHistory",(history)=>{
+
   history.forEach(addMessage);
+
 });
 
 socket.on("chatMessage",(msg)=>{
+
   addMessage(msg);
+
 });
 
 function addMessage(msg){
@@ -313,7 +398,7 @@ function addMessage(msg){
   div.textContent =
     `${msg.name}: ${msg.text}`;
 
-  div.style.marginBottom = "4px";
+  div.style.marginBottom = "5px";
 
   if(msg.id === socket.id){
     div.style.color = "#4ade80";
@@ -323,6 +408,7 @@ function addMessage(msg){
     .appendChild(div);
 
   div.scrollIntoView();
+
 }
 
 document.getElementById("chatInput")
@@ -337,9 +423,41 @@ document.getElementById("chatInput")
       socket.emit("chatMessage",text);
 
       e.target.value = "";
+
     }
+
   }
+
 });
+
+// MOBILE CONTROLS
+
+function bindMobile(btn,key){
+
+  const el = document.getElementById(btn);
+
+  el.addEventListener("touchstart",(e)=>{
+
+    e.preventDefault();
+
+    keys[key] = true;
+
+  });
+
+  el.addEventListener("touchend",(e)=>{
+
+    e.preventDefault();
+
+    keys[key] = false;
+
+  });
+
+}
+
+bindMobile("up","w");
+bindMobile("down","s");
+bindMobile("left","a");
+bindMobile("right","d");
 
 function update(){
 
@@ -383,15 +501,25 @@ function update(){
         (myPlayer.frame + 1) % 4;
 
       animationTimer = 0;
+
     }
 
   }else{
 
     myPlayer.frame = 0;
-    animationTimer = 0;
+
   }
 
-  socket.emit("playerMovement",myPlayer);
+  // FIXED LAG
+  socket.volatile.emit("playerMovement",{
+    x:myPlayer.x,
+    y:myPlayer.y,
+    frame:myPlayer.frame,
+    facingLeft:myPlayer.facingLeft,
+    currentDir:myPlayer.currentDir,
+    character:myPlayer.character
+  });
+
 }
 
 function getFrames(player){
@@ -409,6 +537,7 @@ function getFrames(player){
   }
 
   return char.front;
+
 }
 
 function drawPlayer(player){
@@ -451,6 +580,7 @@ function drawPlayer(player){
       SPRITE_WIDTH,
       SPRITE_HEIGHT
     );
+
   }
 
   ctx.fillStyle = "white";
@@ -462,6 +592,7 @@ function drawPlayer(player){
     drawX + SPRITE_WIDTH/2,
     drawY - 10
   );
+
 }
 
 function draw(){
@@ -472,16 +603,37 @@ function draw(){
     .forEach(drawPlayer);
 
   drawPlayer(myPlayer);
+
 }
 
-function gameLoop(){
+function loop(){
 
   update();
+
   draw();
 
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
+
 }
 
+document.addEventListener("keydown",(e)=>{
+
+  keys[e.key.toLowerCase()] = true;
+
+});
+
+document.addEventListener("keyup",(e)=>{
+
+  keys[e.key.toLowerCase()] = false;
+
+});
+
+loop();
+
+</script>
+
+</body>
+</html>
 document.addEventListener("keydown",(e)=>{
   keys[e.key.toLowerCase()] = true;
 });
